@@ -1067,19 +1067,19 @@ with tab2:
     # Divider for spacing and separation
     st.markdown("---")
 
-    # Run Anomaly Detection button
-    if st.button('Run Anomalies Detection'):
-        try:
-            # Run Anomaly.py and capture the output
-            result = subprocess.run(['C:/Users/A7765/AI/myenv/Scripts/python.exe', 'C:/Users/A7765/AI/anomoly.py'], check=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-            st.success('Anomaly detection completed successfully.')
-            st.text_area('Anomaly Detection Result:', value=result.stdout.decode('utf-8'), height=300)
-        except subprocess.CalledProcessError as e:
-            st.error(f"Failed to run Anomaly Detection: {e}")
-            st.error(f"Error output: {e.stderr.decode('utf-8')}")
+    # # Run Anomaly Detection button
+    # if st.button('Run Anomalies Detection'):
+    #     try:
+    #         # Run Anomaly.py and capture the output
+    #         result = subprocess.run(['C:/Users/A7765/AI/myenv/Scripts/python.exe', 'C:/Users/A7765/AI/anomoly.py'], check=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+    #         st.success('Anomaly detection completed successfully.')
+    #         st.text_area('Anomaly Detection Result:', value=result.stdout.decode('utf-8'), height=300)
+    #     except subprocess.CalledProcessError as e:
+    #         st.error(f"Failed to run Anomaly Detection: {e}")
+    #         st.error(f"Error output: {e.stderr.decode('utf-8')}")
 
     # Divider for spacing and separation
-    st.markdown("---")
+    # st.markdown("---")
 
     # GenAI conversation section
     st.subheader("🤖 Ask AI-Guard")
