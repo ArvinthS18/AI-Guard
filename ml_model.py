@@ -180,6 +180,7 @@
 # rules.to_csv('C:/Users/A7765/AI/rules.csv', index=False)
 
 # print("Rules have been updated successfully.")
+
 import pandas as pd
 from sklearn.model_selection import LeaveOneOut, GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
@@ -263,100 +264,3 @@ rules.drop(columns=['predicted_action'], inplace=True)
 rules.to_csv('C:/Users/A7765/AI/rules.csv', index=False)
 
 print("Rules have been updated successfully.")
-
-# -------- Breach Detection Logic ---------
-
-# Load the logs data for breach detection
-log_file = r'C:\Users\A7765\AI\firewall_logs.csv'
-logs = pd.read_csv(log_file)
-
-# Strip any extra whitespace from column names
-logs.columns = logs.columns.str.strip()
-
-# Convert 'timestamp' to datetime
-logs['timestamp'] = pd.to_datetime(logs['timestamp'], errors='coerce', format='%Y-%m-%d %H:%M:%S')
-
-# Drop rows with invalid timestamps
-logs = logs.dropna(subset=['timestamp'])
-
-# Encode 'ip' and 'traffic_type' using the same encoders as used in training
-logs['ip'] = ip_encoder.transform(logs['ip'])
-logs['traffic_type'] = traffic_type_encoder.transform(logs['traffic_type'])
-
-# Apply the RandomForestClassifier to predict the 'action'
-logs_X = logs[['ip', 'port', 'traffic_type']]
-logs['predicted_action'] = best_model.predict(logs_X)
-
-# Compare actual 'action' with 'predicted_action' and flag discrepancies
-logs['breach_detected'] = logs['action'] != logs['predicted_action']
-
-# Breach Detection Logic
-def detect_breaches(logs):
-    breach_logs = {}
-
-    # 1. Repeated DENY Detection
-    repeated_denies = logs[(logs['action'] == 0)].groupby(['ip', 'port', 'traffic_type']).size()
-    repeated_denies = repeated_denies[repeated_denies > 2]
-    if not repeated_denies.empty:
-        breach_logs['Repeated DENY Detection'] = repeated_denies
-
-    # 2. Protocol Change Detection
-    protocol_changes = []
-    for ip_port, group in logs.groupby(['ip', 'port']):
-        if group['traffic_type'].nunique() > 1 and (group['action'] == 0).any():
-            protocol_changes.append((ip_port, group))
-    if protocol_changes:
-        breach_logs['Protocol Change Detection'] = protocol_changes
-
-    # 3. ALLOW After DENY Detection
-    allow_after_deny = []
-    for ip_port, group in logs.groupby(['ip', 'port']):
-        deny_count = (group['action'] == 0).sum()
-        if deny_count >= 2 and group.iloc[-1]['action'] == 1:
-            allow_after_deny.append((ip_port, group))
-    if allow_after_deny:
-        breach_logs['ALLOW After DENY Detection'] = allow_after_deny
-
-    # 4. Unusual Port Usage Detection (e.g., 8080, 9090, 3000)
-    unusual_ports = logs[(logs['port'].isin([8080, 9090, 3000])) & (logs['action'] == 0)]
-    if not unusual_ports.empty:
-        breach_logs['Unusual Port Usage Detection'] = unusual_ports
-
-    return breach_logs
-
-# Detect breaches based on the predicted actions
-breaches = detect_breaches(logs)
-
-# Format and print the structured output
-def print_breaches(breaches):
-    if breaches:
-        for breach_type, data in breaches.items():
-            print(f"\n{'='*50}\n{breach_type}\n{'='*50}")
-            
-            if breach_type == 'Repeated DENY Detection':
-                print(data.to_string())
-            
-            elif breach_type == 'Protocol Change Detection':
-                for ip_port, group in data:
-                    print(f"\nIP: {ip_port[0]}, Port: {ip_port[1]}")
-                    print(group[['timestamp', 'ip', 'port', 'traffic_type', 'action']].to_string(index=False))
-            
-            elif breach_type == 'ALLOW After DENY Detection':
-                for ip_port, group in data:
-                    print(f"\nIP: {ip_port[0]}, Port: {ip_port[1]}")
-                    print(group[['timestamp', 'ip', 'port', 'traffic_type', 'action']].to_string(index=False))
-            
-            elif breach_type == 'Unusual Port Usage Detection':
-                print(data[['timestamp', 'ip', 'port', 'traffic_type', 'action']].to_string(index=False))
-    else:
-        print("No breaches detected.")
-
-# Print breaches in a structured format
-print_breaches(breaches)
-
-# Inform the user about discrepancies (if any)
-if logs['breach_detected'].any():
-    print("\nBreach detected based on model prediction.")
-    print(logs[logs['breach_detected']][['ip', 'port', 'traffic_type', 'action', 'predicted_action']])
-else:
-    print("No breaches detected by the model.")
